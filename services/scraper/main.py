@@ -1,14 +1,12 @@
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from auth import AuthError, login_with_credentials
-from config import get_settings
-from sync import sync_account_for_user, sync_all_tracked, track_account, untrack_account
-
 app = FastAPI(title="IG Tracker Scraper")
 
 
 def verify_api_key(x_api_key: str = Header(...)) -> None:
+    from config import get_settings
+
     if x_api_key != get_settings()["api_key"]:
         raise HTTPException(status_code=401, detail="API key inválida")
 
@@ -34,6 +32,11 @@ class UntrackRequest(BaseModel):
     username: str = Field(min_length=1)
 
 
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "ig-tracker-scraper"}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -41,6 +44,8 @@ def health():
 
 @app.post("/auth/login", dependencies=[Depends(verify_api_key)])
 def auth_login(body: LoginRequest):
+    from auth import AuthError, login_with_credentials
+
     try:
         result = login_with_credentials(body.username, body.password, body.verification_code)
         return {"success": True, **result}
@@ -56,6 +61,8 @@ def auth_login(body: LoginRequest):
 
 @app.post("/track", dependencies=[Depends(verify_api_key)])
 def track(body: TrackRequest):
+    from sync import track_account
+
     result = track_account(body.user_id, body.username)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result)
@@ -64,6 +71,8 @@ def track(body: TrackRequest):
 
 @app.post("/untrack", dependencies=[Depends(verify_api_key)])
 def untrack(body: UntrackRequest):
+    from sync import untrack_account
+
     result = untrack_account(body.user_id, body.username)
     if not result.get("success"):
         raise HTTPException(status_code=404, detail=result)
@@ -72,6 +81,8 @@ def untrack(body: UntrackRequest):
 
 @app.post("/sync", dependencies=[Depends(verify_api_key)])
 def sync(body: SyncRequest):
+    from sync import sync_account_for_user
+
     result = sync_account_for_user(body.user_id, body.username)
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result)
@@ -80,4 +91,6 @@ def sync(body: SyncRequest):
 
 @app.post("/sync/all", dependencies=[Depends(verify_api_key)])
 def sync_all():
+    from sync import sync_all_tracked
+
     return sync_all_tracked()
