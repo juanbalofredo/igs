@@ -8,7 +8,9 @@ from instagrapi.exceptions import (
     ChallengeRequired,
     ClientError,
     LoginRequired,
+    PleaseWaitFewMinutes,
     PrivateAccount,
+    RecaptchaChallengeForm,
     TwoFactorRequired,
     UserNotFound,
 )
@@ -42,16 +44,35 @@ def login_with_credentials(username: str, password: str, verification_code: str 
     except TwoFactorRequired as exc:
         raise AuthError("two_factor_required", "Instagram requiere código de verificación en dos pasos") from exc
     except ChallengeRequired as exc:
-        raise AuthError("challenge_required", "Instagram requiere completar un desafío de seguridad") from exc
+        raise AuthError(
+            "challenge_required",
+            "Instagram detectó un inicio de sesión sospechoso. Abrí la app de Instagram, aprobá el acceso o completá la verificación, e intentá de nuevo.",
+        ) from exc
+    except RecaptchaChallengeForm as exc:
+        raise AuthError(
+            "challenge_required",
+            "Instagram pide verificación extra. Entrá a la app de Instagram desde tu celular e intentá de nuevo.",
+        ) from exc
+    except PleaseWaitFewMinutes as exc:
+        raise AuthError(
+            "rate_limited",
+            "Instagram pidió esperar unos minutos. Probá de nuevo más tarde.",
+        ) from exc
     except BadPassword as exc:
-        raise AuthError("invalid_credentials", "Usuario o contraseña incorrectos") from exc
+        raise AuthError(
+            "invalid_credentials",
+            "Usuario o contraseña incorrectos. Si estás seguro de que son correctos, Instagram puede estar bloqueando el login desde el servidor.",
+        ) from exc
     except ClientError as exc:
-        raise AuthError("login_failed", str(exc)) from exc
-    except Exception as exc:
         message = str(exc)
-        if "invalid" in message.lower() or "password" in message.lower():
-            raise AuthError("invalid_credentials", "Usuario o contraseña incorrectos") from exc
+        if "challenge" in message.lower():
+            raise AuthError(
+                "challenge_required",
+                "Instagram requiere verificación de seguridad. Revisá la app de Instagram en tu celular.",
+            ) from exc
         raise AuthError("login_failed", message) from exc
+    except Exception as exc:
+        raise AuthError("login_failed", str(exc)) from exc
 
     user_id = str(client.user_id)
     settings = client.get_settings()
