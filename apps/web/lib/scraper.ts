@@ -45,9 +45,18 @@ async function scraperFetch<T>(path: string, options: RequestInit = {}): Promise
 
   if (!response.ok) {
     const detail = data.detail || data;
+    const payload =
+      typeof detail === "object"
+        ? (detail as Record<string, unknown>)
+        : { error_message: String(detail) };
+
     throw {
       status: response.status,
-      ...(typeof detail === "object" ? (detail as Record<string, unknown>) : { error_message: String(detail) }),
+      error_code: payload.error_code || payload.error_message,
+      error_message:
+        (payload.error_message as string) ||
+        (payload.error_code as string) ||
+        `El scraper respondió con un error (${response.status})`,
     };
   }
 

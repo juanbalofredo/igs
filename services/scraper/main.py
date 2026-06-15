@@ -1,14 +1,18 @@
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="IG Tracker Scraper")
 
 
 def verify_api_key(x_api_key: str = Header(...)) -> None:
-    from config import get_settings
+    try:
+        from config import get_settings
 
-    if x_api_key != get_settings()["api_key"]:
-        raise HTTPException(status_code=401, detail="API key inválida")
+        if x_api_key != get_settings()["api_key"]:
+            raise HTTPException(status_code=401, detail={"error_code": "unauthorized", "error_message": "API key inválida"})
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail={"error_code": "config_error", "error_message": str(exc)}) from exc
 
 
 class LoginRequest(BaseModel):
@@ -32,6 +36,18 @@ class UntrackRequest(BaseModel):
     username: str = Field(min_length=1)
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error_code": "server_error",
+            "error_message": str(exc),
+        },
+    )
+
+
 @app.get("/")
 def root():
     return {"status": "ok", "service": "ig-tracker-scraper"}
@@ -40,6 +56,15 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/health/db", dependencies=[Depends(verify_api_key)])
+def health_db():
+    from db import get_supabase
+
+    supabase = get_supabase()
+    result = supabase.table("users").select("id").limit(1).execute()
+    return {"status": "ok", "users_sample": len(result.data or [])}
 
 
 @app.post("/auth/login", dependencies=[Depends(verify_api_key)])
