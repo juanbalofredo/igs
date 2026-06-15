@@ -46,6 +46,12 @@ def auth_login(body: LoginRequest):
         return {"success": True, **result}
     except AuthError as exc:
         return {"success": False, "error_code": exc.code, "error_message": exc.message}
+    except Exception as exc:
+        return {
+            "success": False,
+            "error_code": "server_error",
+            "error_message": f"Error del servidor: {exc}",
+        }
 
 
 @app.post("/track", dependencies=[Depends(verify_api_key)])
