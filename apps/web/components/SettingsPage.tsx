@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, LogOut } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -78,9 +79,8 @@ export function SettingsPage({ username }: SettingsPageProps) {
           <form onSubmit={handleReconnect} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">Nueva contraseña de Instagram</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required

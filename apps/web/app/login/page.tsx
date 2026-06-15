@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Users } from "lucide-react";
+import { AlertTriangle, Loader2, Users } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,11 +15,13 @@ export default function LoginPage() {
   const [needs2fa, setNeeds2fa] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setErrorCode(null);
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -37,6 +40,7 @@ export default function LoginPage() {
         if (data.error_code === "two_factor_required") {
           setNeeds2fa(true);
         }
+        setErrorCode(data.error_code || null);
         setError(data.error_message || "No se pudo iniciar sesión");
         return;
       }
@@ -80,16 +84,15 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete="current-password"
                   required
                 />
               </div>
-              {needs2fa && (
+              {(needs2fa || errorCode === "two_factor_required") && (
                 <div className="space-y-2">
                   <Label htmlFor="code">Código 2FA</Label>
                   <Input
@@ -100,7 +103,29 @@ export default function LoginPage() {
                   />
                 </div>
               )}
-              {error && <p className="text-sm text-red-400">{error}</p>}
+              {error && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+              {errorCode === "invalid_credentials" && (
+                <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>
+                    Si la contraseña es correcta, revisá la app de Instagram en tu celular por una alerta de
+                    seguridad y aprobalo. Luego intentá de nuevo.
+                  </p>
+                </div>
+              )}
+              {errorCode === "challenge_required" && (
+                <div className="flex gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>
+                    Instagram bloqueó el intento. Abrí la app en el celular, confirmá que fuiste vos, y volvé a
+                    intentar en unos minutos.
+                  </p>
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Entrar con Instagram

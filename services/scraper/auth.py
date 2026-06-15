@@ -35,6 +35,7 @@ def _client_from_settings(settings_dict: dict[str, Any]) -> Client:
 def login_with_credentials(username: str, password: str, verification_code: str | None = None) -> dict[str, Any]:
     username = username.strip().lstrip("@").lower()
     client = Client()
+    client.delay_range = [1, 3]
 
     try:
         if verification_code:
